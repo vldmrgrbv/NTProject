@@ -1,0 +1,34 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('bot_settings', function (Blueprint $table) {
+            $table->id();
+            $table->string('key')->unique();
+            $table->text('value')->nullable();
+            $table->timestamps();
+        });
+
+        // Insert default start message
+        DB::table('bot_settings')->insert([
+            'key' => 'start_message',
+            'value' => 'Добро пожаловать в NT Bot! Выберите интересующий вас раздел:',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('bot_settings');
+    }
+};

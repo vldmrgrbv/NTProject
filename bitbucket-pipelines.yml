@@ -1,0 +1,45 @@
+image: kroniak/ssh-client
+definitions:
+  steps:
+    - step: &deploy
+          clone:
+            enabled: false
+          script:
+            - ssh $user@$HOST
+              'cd '"$project_path"'
+              && git fetch
+              && git stash
+              && git checkout '"$BITBUCKET_BRANCH"'
+              && git pull
+              && composer install --no-interaction --prefer-dist --optimize-autoloader
+              && php artisan migrate --force
+              && npm ci --no-audit --no-fund
+              && npm run build
+              && php artisan optimize:clear
+              && php artisan optimize
+              && php artisan moonshine:optimize-clear
+              && pm2 startOrReload ecosystem.config.cjs'
+          after-script:
+            - pipe: docker://ddev/companyy-telegram-pipe:pipeline-fail
+              variables:
+                CHAT_ID: $TG_CHAT_ID
+                TG_BOT_TOKEN: $TG_BOT_TOKEN
+                CREDENTIALS: $PIPE_CREDENTIALS
+                THREAD_ID: $THREAD_ID
+pipelines:
+  branches:
+    dev:
+      - step:
+          <<: *deploy
+          name: Deploy to dev
+          deployment: dev
+    release/*:
+      - step:
+          <<: *deploy
+          name: Deploy to preprod
+          deployment: preprod
+    master:
+      - step:
+          <<: *deploy
+          name: Deploy to prod
+          deployment: prod
